@@ -45,24 +45,29 @@ def data_prep(DF, ticker, horizon, shift = 0, cv_sets = 0):
     df = df.rename(columns={"Close": "y"})
     
     if shift > 0:
-        regressor_cols = list([a for a in non_target_cols if a not in ('Open','High','Low', 'Date','ret')])
+        regressor_cols = list([a for a in non_target_cols if a not in ('Open','High','Low', 'Volume', 'Date','ret')])
         for col in regressor_cols:
             df[col] = df[col].shift(shift);
     
     
-    for cv_set in range(cv_sets):
-        df['cv_set', str(cv_set)] = 'train'
-        df['cv_set', str(cv_set)][-horizon:] = np.array('test')
+    df['cv_set' + str(0)] = 'train'
+    df['cv_set' + str(0)][-horizon:] = np.array('test')
+    
+    if cv_sets >0:
+        for cv_set in range(1,cv_sets):
+            df['cv_set' + str(cv_set)] = df['cv_set0'].shift(-cv_set)
     
     # if weekends are skipped for in fxdata, make sure that the fcst length covers weekdays
-    days_diff = days_between(min(df_test['ds']), max(df_test['ds'])) # .strftime('%Y-%m-%d')
+    days_diff = days_between(min(df[df['cv_set0'] == 'test']['ds']), 
+                             max(df[df['cv_set0'] == 'test']['ds'])) # .strftime('%Y-%m-%d')
     
-    
-                 
+                   
     if days_diff > horizon:
         horizon = days_diff;
         
     return(df, horizon);
+    
+
 
 
 def prophet_estimate(prophet_training_data, 
