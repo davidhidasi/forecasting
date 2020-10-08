@@ -35,6 +35,13 @@ def days_between(d1, d2):
         d2 = datetime.strptime(d2, "%Y-%m-%d")
     return abs((d2 - d1).days);
 
+def mape(actual, pred):
+    return np.mean(abs((actual - pred)/actual))
+
+def mae(actual, pred):
+    return np.mean(abs(actual - pred));
+
+
 def data_prep(DF, ticker, horizon, shift = 0, cv_sets = 0):    
     df = copy.deepcopy(DF)
     df = pd.DataFrame(df[ticker])#[:-1]
@@ -96,6 +103,7 @@ def prophet_estimate(prophet_training_data,
                         seasonality_prior_scale=seasonality_pr, 
                         daily_seasonality=daily_seas)
     
+
     training_data = copy.deepcopy(prophet_training_data)
     test_data = copy.deepcopy(prophet_test_data)
 #    ,
@@ -113,9 +121,19 @@ def prophet_estimate(prophet_training_data,
     # Fit model
     fit_model = m.fit(training_data)
     # If there are no regressors, create a future df simply based on dates
-    future = fit_model.make_future_dataframe(periods=horizon, 
+    
+      # exclude weekends from future
+      # 3:4, 4:4
+    horizon_ew = horizon
+    #print(pd.to_datetime(max(training_data['ds'])).dayofweek)
+    if pd.to_datetime(max(training_data['ds'])).dayofweek >= 3:
+        horizon_ew = 4;
+    
+    future = fit_model.make_future_dataframe(periods=horizon_ew, 
                                              freq=freq, #'2 min',
                                              include_history=include_hist)
+    future = future[future['ds'].dt.dayofweek < 5]
+    
 
     # If regressors are to be used then add regressor columns from test to future df
     if len(regressors) > 0:
