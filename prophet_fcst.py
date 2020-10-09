@@ -43,8 +43,8 @@ def mae(actual, pred):
 
 
 def data_prep(DF, ticker, horizon, shift = 0, cv_sets = 0):    
-    df = copy.deepcopy(DF)
-    df = pd.DataFrame(df[ticker])#[:-1]
+    dict_temp = copy.deepcopy(DF)
+    df = pd.DataFrame(dict_temp[ticker]) #[:-1]
     df['ds'] = df.index
     
     non_target_cols = list([a for a in df.columns if a != 'ds' and a != 'Close']) 
@@ -55,10 +55,9 @@ def data_prep(DF, ticker, horizon, shift = 0, cv_sets = 0):
         regressor_cols = list([a for a in non_target_cols if a not in ('Open','High','Low', 'Volume', 'Date','ret')])
         for col in regressor_cols:
             df[col] = df[col].shift(shift);
-    
-    
+      
     df['cv_set' + str(0)] = 'train'
-    df['cv_set' + str(0)][-horizon:] = np.array('test')
+    df.iloc[(len(df)-horizon):,len(df.columns)-1] = 'test'
     
     if cv_sets >0:
         for cv_set in range(1,cv_sets):
@@ -67,15 +66,12 @@ def data_prep(DF, ticker, horizon, shift = 0, cv_sets = 0):
     # if weekends are skipped for in fxdata, make sure that the fcst length covers weekdays
     days_diff = days_between(min(df[df['cv_set0'] == 'test']['ds']), 
                              max(df[df['cv_set0'] == 'test']['ds'])) # .strftime('%Y-%m-%d')
-    
-                   
+                  
     if days_diff > horizon:
         horizon = days_diff;
         
     return(df, horizon);
     
-
-
 
 def prophet_estimate(prophet_training_data, 
                      prophet_test_data,
