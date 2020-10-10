@@ -8,13 +8,9 @@ Created on Thu Oct  1 18:00:20 2020
 
 import pandas as pd
 import numpy as np
-import multiprocessing as mp
-import itertools
 from fbprophet import Prophet
 import datetime, time
 import dateutil.parser
-import inspect
-import warnings
 import copy
 
 
@@ -25,9 +21,6 @@ def minutes_from_epoch(ds):
 def remove_timezone(ts):
     ts = dateutil.parser.parse(ts)
     return(ts.strftime('%m/%d/%Y'))
-
-def log_result(result):
-    result_list.append(result)
     
 def days_between(d1, d2):
     if isinstance(d1, datetime.datetime) == False:
@@ -42,19 +35,24 @@ def mae(actual, pred):
     return np.mean(abs(actual - pred));
 
 
-def data_prep(DF, ticker, horizon, shift = 0, cv_sets = 0):    
+def data_prep(DF, ticker, target = 'Close', regressors = [], horizon = 1, shift = 0, cv_sets = 0):    
     dict_temp = copy.deepcopy(DF)
     df = pd.DataFrame(dict_temp[ticker]) #[:-1]
     df['ds'] = df.index
     
-    non_target_cols = list([a for a in df.columns if a != 'ds' and a != 'Close']) 
-    df = df.reindex(columns=(['ds', 'Close'] + non_target_cols))
-    df = df.rename(columns={"Close": "y"})
+    non_target_cols = list([a for a in df.columns if a != 'ds' and a != target]) 
+    df = df.reindex(columns=(['ds', target] + non_target_cols))
+    df = df.rename(columns={target: "y"})
     
-    if shift > 0:
-        regressor_cols = list([a for a in non_target_cols if a not in ('Open','High','Low', 'Volume', 'Date','ret')])
-        for col in regressor_cols:
-            df[col] = df[col].shift(shift);
+    
+    if len(regressors) > 0:
+        if shift > 0:
+            #regressor_cols = list([a for a in non_target_cols if a not in ('Open','High','Low', 'Volume', 'Date','ret')])
+            for col in regressors:
+                df[col] = df[col].shift(shift)
+        else:
+            for col in regressors:
+                df[col] = df[col];
       
     df['cv_set' + str(0)] = 'train'
     df.iloc[(len(df)-horizon):,len(df.columns)-1] = 'test'
@@ -137,8 +135,13 @@ def prophet_estimate(prophet_training_data,
             if include_hist == False:
                 future[regressor] = np.array(test_data[regressor])
             else:
-                future[regressor] = training_data[regressor].append(test_data[regressor],
-                      ignore_index=True)
+                future[regressor] = np.array(
+                        training_data[regressor].append(test_data[regressor], 
+                                     ignore_index=True)
+                        )
+    
+    import pdb
+    pdb.set_trace()
 
     fcst = fit_model.predict(future)
     if include_hist == False:
