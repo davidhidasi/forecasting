@@ -170,7 +170,12 @@ def prophet_estimate(prophet_training_data,
         if include_hist == False:
             joined_data = pd.merge(fcst, test_data, how='inner', on=['ds'])
         else:
-            joined_data = pd.merge(fcst, training_data.append(test_data, ignore_index=True), how='left', on=['ds'])
+            joined_data_history = pd.merge(fcst, 
+                                   training_data.append(test_data, 
+                                                        ignore_index=True), 
+                                   how='left', on=['ds'])
+            joined_data = joined_data_history.tail(horizon)
+            
         rep_obj = {'changepoints_pr' : changepoints_pr,
         'holiday_pr' : holiday_pr, 
         'seasonality_m' : seasonality_m,
@@ -183,7 +188,10 @@ def prophet_estimate(prophet_training_data,
         'mape' :np.mean([(abs(x - y)/x) for (x,y) in zip(joined_data.y, joined_data.yhat)]),
         'mae' :np.mean([abs(x - y) for (x,y) in zip(joined_data.y, joined_data.yhat)]) };
         if tune == False:
-            rep_obj = joined_data
+            if include_hist == False:
+                rep_obj = joined_data
+            else:
+                rep_obj = joined_data_history
         if verbose == True: 
             print(rep_obj)
     else:
