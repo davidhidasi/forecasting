@@ -35,8 +35,11 @@ def mae(actual, pred):
     return np.mean(abs(actual - pred));
 
 
-def data_prep(DF, ticker, target = 'Close', regressors = [], horizon = 1, shift = 0, cv_sets = 0, genuine_fcst = False):    
+def data_prep(DF, ticker, target = 'Close', regressors = [], horizon = 1, shift = 0, cv_sets = 0, genuine_fcst = False, debug = False):    
     dict_temp = copy.deepcopy(DF)
+    if debug == True:
+        import pdb
+        pdb.set_trace()
     df = pd.DataFrame(dict_temp[ticker]) #[:-1]
     df['ds'] = df.index
         
@@ -168,7 +171,7 @@ def prophet_estimate(prophet_training_data,
     fcst = fit_model.predict(future)
     if genuine_fcst == False:
         if include_hist == False:
-            joined_data = pd.merge(fcst, test_data, how='inner', on=['ds'])
+            joined_data = pd.merge(test_data, fcst, how='outer', on=['ds'])
         else:
             joined_data_history = pd.merge(fcst, 
                                    training_data.append(test_data, 
@@ -195,7 +198,8 @@ def prophet_estimate(prophet_training_data,
         if verbose == True: 
             print(rep_obj)
     else:
-        rep_obj = pd.merge(fcst, training_data, how='outer', on=['ds'])
-        rep_obj['mape'] = [abs(x - y)/x for (x,y) in zip(rep_obj.y, rep_obj.yhat)]
-        rep_obj['mae'] = [abs(x - y) for (x,y) in zip(rep_obj.y, rep_obj.yhat)]
+        rep_obj = pd.merge(training_data, fcst, how='outer', on=['ds'])
+        if include_hist == True:
+            rep_obj['mape'] = [abs(x - y)/x for (x,y) in zip(rep_obj.y, rep_obj.yhat)]
+            rep_obj['mae'] = [abs(x - y) for (x,y) in zip(rep_obj.y, rep_obj.yhat)]
     return(rep_obj);
